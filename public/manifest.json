@@ -1,0 +1,21 @@
+{
+  "name": "言语云企业管理系统",
+  "short_name": "言语云EMS",
+  "description": "企业级管理系统解决方案",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#ffffff",
+  "theme_color": "#0ea5e9",
+  "icons": [
+    {
+      "src": "/images/yanyu-cloud-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/yanyu-cloud-3d-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
