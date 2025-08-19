@@ -1,478 +1,382 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { useSidebar } from "@/hooks/use-sidebar"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { useSidebar, useSidebarKeyboard } from "@/hooks/use-sidebar"
 import {
-  Home,
+  LayoutDashboard,
   Users,
   CheckSquare,
   DollarSign,
-  BarChart3,
-  MessageSquare,
-  Settings,
-  FileText,
   Target,
+  FileCheck,
+  MessageSquare,
+  TrendingUp,
+  BarChart3,
+  Search,
+  Settings,
+  ChevronRight,
+  Bell,
+  Zap,
   Brain,
   Database,
   Shield,
-  Smartphone,
-  X,
-  ChevronRight,
-  Building2,
-  TrendingUp,
-  Bell,
-  Plus,
-  Upload,
+  LogOut,
   RefreshCw,
-  Zap,
-  ImageIcon,
-  Video,
-  PieChart,
-  Calculator,
-  Receipt,
-  CreditCard,
-  UserCheck,
-  Monitor,
-  MessageCircle,
-  GraduationCap,
-  BookOpen,
-  Megaphone,
-  User,
-  LogIn,
-  Briefcase,
-  Activity,
-  Search,
   Keyboard,
+  X,
 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
-interface MenuItem {
-  title: string
+interface NavigationItem {
+  id: string
+  label: string
   icon: any
+  badge?: string | number
+  children?: NavigationItem[]
   href?: string
-  badge?: string
-  children?: MenuItem[]
-  expanded?: boolean
-  level?: number
+  description?: string
 }
+
+const navigationItems: NavigationItem[] = [
+  {
+    id: "dashboard",
+    label: "仪表盘",
+    icon: LayoutDashboard,
+    href: "/",
+    description: "系统概览和关键指标",
+  },
+  {
+    id: "customers",
+    label: "客户管理",
+    icon: Users,
+    badge: 12,
+    href: "/customers",
+    description: "客户信息和关系管理",
+    children: [
+      { id: "customer-list", label: "客户列表", icon: Users, href: "/customers" },
+      { id: "customer-analytics", label: "客户分析", icon: BarChart3, href: "/analytics/customers" },
+    ],
+  },
+  {
+    id: "tasks",
+    label: "任务管理",
+    icon: CheckSquare,
+    badge: 5,
+    href: "/tasks",
+    description: "工作任务和项目跟踪",
+  },
+  {
+    id: "finance",
+    label: "财务管理",
+    icon: DollarSign,
+    href: "/finance",
+    description: "财务数据和报表管理",
+    children: [
+      { id: "finance-overview", label: "财务概览", icon: DollarSign, href: "/finance" },
+      { id: "finance-budget", label: "预算管理", icon: Target, href: "/finance/budget" },
+      { id: "finance-invoices", label: "发票管理", icon: FileCheck, href: "/finance/invoices" },
+      { id: "finance-payments", label: "支付管理", icon: CheckSquare, href: "/finance/payments" },
+    ],
+  },
+  {
+    id: "okr",
+    label: "OKR管理",
+    icon: Target,
+    badge: 3,
+    href: "/okr",
+    description: "目标和关键结果管理",
+  },
+  {
+    id: "approval",
+    label: "审批中心",
+    icon: FileCheck,
+    badge: 8,
+    href: "/approval",
+    description: "工作流程和审批管理",
+  },
+  {
+    id: "communication",
+    label: "沟通协作",
+    icon: MessageSquare,
+    badge: "新",
+    href: "/communication",
+    description: "团队沟通和协作工具",
+    children: [
+      { id: "chat", label: "即时聊天", icon: MessageSquare, href: "/communication/chat" },
+      { id: "meetings", label: "会议管理", icon: Users, href: "/communication/meetings" },
+      { id: "documents", label: "文档协作", icon: FileCheck, href: "/communication/documents" },
+      { id: "notifications", label: "通知中心", icon: Bell, href: "/communication/notifications" },
+    ],
+  },
+  {
+    id: "ai",
+    label: "AI分析",
+    icon: Brain,
+    href: "/ai",
+    description: "人工智能分析和洞察",
+    children: [
+      { id: "ai-overview", label: "AI概览", icon: Brain, href: "/ai" },
+      { id: "ai-customer-data", label: "客户数据分析", icon: Users, href: "/ai/customer-data" },
+      { id: "ai-smart-forms", label: "智能表单", icon: FileCheck, href: "/ai/smart-forms" },
+      { id: "ai-content-creation", label: "内容创作", icon: Zap, href: "/ai/content-creation" },
+    ],
+  },
+  {
+    id: "analytics",
+    label: "数据分析",
+    icon: BarChart3,
+    href: "/analytics",
+    description: "数据可视化和分析报告",
+    children: [
+      { id: "analytics-overview", label: "分析概览", icon: BarChart3, href: "/analytics" },
+      { id: "analytics-sales", label: "销售分析", icon: TrendingUp, href: "/analytics/sales" },
+      { id: "analytics-performance", label: "绩效分析", icon: Target, href: "/analytics/performance" },
+    ],
+  },
+  {
+    id: "system",
+    label: "系统管理",
+    icon: Settings,
+    href: "/system",
+    description: "系统设置和管理工具",
+    children: [
+      { id: "system-settings", label: "系统设置", icon: Settings, href: "/settings" },
+      { id: "system-database", label: "数据库管理", icon: Database, href: "/system/database" },
+      { id: "system-security", label: "安全管理", icon: Shield, href: "/security/mfa" },
+      { id: "system-health", label: "系统健康", icon: RefreshCw, href: "/system/health" },
+    ],
+  },
+]
 
 interface SidebarProps {
   className?: string
   collapsed?: boolean
-  activeModule?: string
-  setActiveModule?: (module: string) => void
   isMobile?: boolean
   onItemClick?: () => void
 }
 
-export function Sidebar({
-  className,
-  collapsed = false,
-  activeModule,
-  setActiveModule,
-  isMobile = false,
-  onItemClick,
-}: SidebarProps) {
-  const pathname = usePathname()
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
+export function Sidebar({ className, collapsed = false, isMobile = false, onItemClick }: SidebarProps) {
+  const router = useRouter()
   const sidebarRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
 
   const {
-    isOpen,
+    activeModule,
+    searchQuery,
     expandedItems,
-    activeItem,
     focusedIndex,
-    closeSidebar,
+    keyboardNavigation,
+    setActiveModule,
+    setSearchQuery,
     toggleExpanded,
-    setActiveItem,
     setFocusedIndex,
-    resetFocus,
+    setKeyboardNavigation,
+    enterFullscreen,
   } = useSidebar()
 
-  const menuItems: MenuItem[] = [
-    {
-      title: "仪表盘",
-      icon: Home,
-      href: "/",
-    },
-    {
-      title: "客户管理",
-      icon: Users,
-      href: "/customers",
-      badge: "12",
-    },
-    {
-      title: "任务管理",
-      icon: CheckSquare,
-      href: "/tasks",
-      badge: "5",
-    },
-    {
-      title: "财务管理",
-      icon: DollarSign,
-      children: [
-        { title: "财务概览", icon: PieChart, href: "/finance" },
-        { title: "预算管理", icon: Calculator, href: "/finance/budget" },
-        { title: "发票管理", icon: Receipt, href: "/finance/invoices" },
-        { title: "支付管理", icon: CreditCard, href: "/finance/payments" },
-        { title: "财务报表", icon: BarChart3, href: "/finance/reports" },
-      ],
-    },
-    {
-      title: "OKR管理",
-      icon: Target,
-      href: "/okr",
-    },
-    {
-      title: "KPI跟踪",
-      icon: TrendingUp,
-      href: "/kpi",
-    },
-    {
-      title: "报表分析",
-      icon: FileText,
-      href: "/reports",
-    },
-    {
-      title: "沟通协作",
-      icon: MessageSquare,
-      badge: "3",
-      children: [
-        { title: "沟通概览", icon: MessageSquare, href: "/communication" },
-        { title: "实时聊天", icon: MessageSquare, href: "/communication/chat" },
-        { title: "会议管理", icon: Video, href: "/communication/meetings" },
-        { title: "文档协作", icon: FileText, href: "/communication/documents" },
-        { title: "通知中心", icon: Bell, href: "/communication/notifications" },
-        { title: "视频通话", icon: Video, href: "/communication/video" },
-        { title: "文件传输", icon: Upload, href: "/communication/files" },
-      ],
-    },
-    {
-      title: "AI分析",
-      icon: Brain,
-      badge: "NEW",
-      children: [
-        { title: "AI概览", icon: Brain, href: "/ai" },
-        { title: "客户数据分析", icon: Users, href: "/ai/customer-data" },
-        { title: "智能表单", icon: ImageIcon, href: "/ai/smart-forms" },
-        { title: "内容创作", icon: BookOpen, href: "/ai/content-creation" },
-        { title: "移动AI助手", icon: Smartphone, href: "/ai/mobile" },
-        { title: "预测分析", icon: TrendingUp, href: "/analytics/predictive" },
-      ],
-    },
-    {
-      title: "数据分析",
-      icon: BarChart3,
-      children: [
-        { title: "分析概览", icon: BarChart3, href: "/analytics" },
-        { title: "销售分析", icon: TrendingUp, href: "/analytics/sales" },
-        { title: "客户分析", icon: Users, href: "/analytics/customers" },
-        { title: "性能分析", icon: Activity, href: "/analytics/performance" },
-        { title: "完整性分析", icon: CheckSquare, href: "/analytics/completeness" },
-      ],
-    },
-    {
-      title: "审批管理",
-      icon: UserCheck,
-      href: "/approval",
-      badge: "2",
-    },
-    {
-      title: "系统管理",
-      icon: Settings,
-      children: [
-        { title: "系统概览", icon: Monitor, href: "/overview" },
-        { title: "系统初始化", icon: RefreshCw, href: "/system/initialization" },
-        { title: "数据库管理", icon: Database, href: "/system/database" },
-        { title: "系统健康监控", icon: Activity, href: "/system/health" },
-        { title: "性能优化", icon: Zap, href: "/performance" },
-        { title: "安全审计", icon: Shield, href: "/audit" },
-        { title: "多因素认证", icon: Shield, href: "/security/mfa" },
-        { title: "侧边栏配置", icon: Settings, href: "/settings/sidebar" },
-        { title: "布局设置", icon: ImageIcon, href: "/settings/layout" },
-      ],
-    },
-    {
-      title: "测试中心",
-      icon: Monitor,
-      href: "/test",
-    },
-    {
-      title: "企业功能",
-      icon: Briefcase,
-      href: "/enterprise-features",
-    },
-    {
-      title: "培训推广",
-      icon: GraduationCap,
-      children: [
-        { title: "用户培训", icon: BookOpen, href: "/training" },
-        { title: "推广系统", icon: Megaphone, href: "/promotion" },
-      ],
-    },
-    {
-      title: "反馈监控",
-      icon: MessageCircle,
-      children: [
-        { title: "用户反馈", icon: MessageCircle, href: "/feedback" },
-        { title: "生产监控", icon: Monitor, href: "/monitoring" },
-      ],
-    },
-    {
-      title: "用户中心",
-      icon: User,
-      children: [
-        { title: "个人资料", icon: User, href: "/profile" },
-        { title: "登录页面", icon: LogIn, href: "/login" },
-      ],
-    },
-  ]
+  // 过滤导航项
+  const filteredItems = navigationItems.filter(
+    (item) =>
+      item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.children?.some((child) => child.label.toLowerCase().includes(searchQuery.toLowerCase())),
+  )
 
-  const quickActions = [
-    { title: "新建客户", icon: Plus, action: "create-customer" },
-    { title: "创建任务", icon: CheckSquare, action: "create-task" },
-    { title: "发送消息", icon: MessageSquare, action: "send-message" },
-    { title: "生成报告", icon: FileText, action: "generate-report" },
-  ]
-
-  // 添加展开状态到菜单项
-  const menuItemsWithExpanded = menuItems.map((item) => ({
-    ...item,
-    expanded: expandedItems.includes(item.title),
-  }))
-
-  // 键盘导航
-  const { flattenMenuItems } = useSidebarKeyboard(menuItemsWithExpanded)
-
-  // 设置滚动事件监听器
-  useEffect(() => {
-    const scrollElement = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]")
-
-    if (!scrollElement) return
-
-    const handleScroll = () => {
-      const scrollTop = scrollElement.scrollTop
-      setIsScrolled(scrollTop > 10)
+  // 扁平化所有可导航项目
+  const flattenedItems = navigationItems.reduce<NavigationItem[]>((acc, item) => {
+    acc.push(item)
+    if (item.children && expandedItems.includes(item.id)) {
+      acc.push(...item.children)
     }
-
-    scrollElement.addEventListener("scroll", handleScroll, { passive: true })
-
-    return () => {
-      scrollElement.removeEventListener("scroll", handleScroll)
-    }
+    return acc
   }, [])
 
-  // 处理菜单项点击
-  const handleItemClick = useCallback(
-    (item: MenuItem, index?: number) => {
-      if (item.href && setActiveModule) {
-        const module = item.href.split("/")[1] || "dashboard"
-        setActiveModule(module)
-        setActiveItem(item.href)
-      }
+  // 键盘导航处理
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (!keyboardNavigation) return
 
-      if (typeof index === "number") {
-        setFocusedIndex(index)
+      switch (event.key) {
+        case "ArrowDown":
+          event.preventDefault()
+          setFocusedIndex(Math.min(focusedIndex + 1, flattenedItems.length - 1))
+          break
+        case "ArrowUp":
+          event.preventDefault()
+          setFocusedIndex(Math.max(focusedIndex - 1, 0))
+          break
+        case "ArrowRight":
+          event.preventDefault()
+          const currentItem = flattenedItems[focusedIndex]
+          if (currentItem?.children && !expandedItems.includes(currentItem.id)) {
+            toggleExpanded(currentItem.id)
+          }
+          break
+        case "ArrowLeft":
+          event.preventDefault()
+          const currentItemLeft = flattenedItems[focusedIndex]
+          if (currentItemLeft?.children && expandedItems.includes(currentItemLeft.id)) {
+            toggleExpanded(currentItemLeft.id)
+          }
+          break
+        case "Enter":
+        case " ":
+          event.preventDefault()
+          const selectedItem = flattenedItems[focusedIndex]
+          if (selectedItem) {
+            handleItemClick(selectedItem)
+          }
+          break
+        case "Escape":
+          event.preventDefault()
+          setKeyboardNavigation(false)
+          setFocusedIndex(-1)
+          break
+        case "Home":
+          event.preventDefault()
+          setFocusedIndex(0)
+          break
+        case "End":
+          event.preventDefault()
+          setFocusedIndex(flattenedItems.length - 1)
+          break
+        case "/":
+          event.preventDefault()
+          searchInputRef.current?.focus()
+          break
       }
+    },
+    [keyboardNavigation, focusedIndex, flattenedItems, expandedItems, toggleExpanded],
+  )
 
+  // 添加键盘事件监听
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [handleKeyDown])
+
+  // 处理项目点击
+  const handleItemClick = (item: NavigationItem) => {
+    if (item.children) {
+      toggleExpanded(item.id)
+    } else {
+      setActiveModule(item.id)
+      // 进入页面时自动全屏
+      if (item.id !== "dashboard") {
+        enterFullscreen()
+      }
+      if (item.href) {
+        router.push(item.href)
+      }
       onItemClick?.()
-    },
-    [setActiveModule, setActiveItem, setFocusedIndex, onItemClick],
-  )
-
-  // 处理快捷操作
-  const handleQuickAction = useCallback(
-    (action: string) => {
-      console.log("Quick action:", action)
-      // 这里可以添加具体的快捷操作逻辑
-      if (isMobile) {
-        onItemClick?.()
-      }
-    },
-    [isMobile, onItemClick],
-  )
-
-  // 处理展开/收缩
-  const handleToggleExpanded = useCallback(
-    (title: string) => {
-      if (collapsed && !isMobile) return
-      toggleExpanded(title)
-    },
-    [collapsed, isMobile, toggleExpanded],
-  )
-
-  // 过滤菜单项
-  const filteredMenuItems = menuItemsWithExpanded.filter(
-    (item) =>
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.children?.some((child) => child.title.toLowerCase().includes(searchQuery.toLowerCase())),
-  )
-
-  const renderMenuItem = (item: MenuItem, level = 0, index = 0) => {
-    const isExpanded = item.expanded
-    const hasChildren = item.children && item.children.length > 0
-    const isActive = item.href === pathname
-    const isFocused = focusedIndex === index
-
-    // 收缩状态下的桌面端显示
-    if (collapsed && !isMobile && level === 0) {
-      return (
-        <motion.div
-          key={item.title}
-          className="mb-1"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.2, delay: index * 0.05 }}
-        >
-          {item.href ? (
-            <Link href={item.href} title={item.title}>
-              <Button
-                variant={isActive ? "secondary" : "ghost"}
-                size="sm"
-                className={cn(
-                  "w-full h-12 p-0 justify-center group relative",
-                  "hover:bg-sky-50 hover:text-sky-600 dark:hover:bg-sky-900/20 transition-all duration-200",
-                  "active:scale-95 focus:scale-105 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2",
-                  isActive && "bg-sky-100 text-sky-700 shadow-sm dark:bg-sky-900/30",
-                  isFocused && "ring-2 ring-sky-500 ring-offset-2",
-                )}
-                onClick={() => handleItemClick(item, index)}
-                tabIndex={isFocused ? 0 : -1}
-              >
-                <item.icon className="h-5 w-5" />
-                {/* 悬停提示 */}
-                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                  {item.title}
-                </div>
-              </Button>
-            </Link>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "w-full h-12 p-0 justify-center hover:bg-sky-50 hover:text-sky-600 dark:hover:bg-sky-900/20 transition-colors group relative",
-                "focus:ring-2 focus:ring-sky-500 focus:ring-offset-2",
-                isFocused && "ring-2 ring-sky-500 ring-offset-2",
-              )}
-              title={item.title}
-              tabIndex={isFocused ? 0 : -1}
-            >
-              <item.icon className="h-5 w-5" />
-              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                {item.title}
-              </div>
-            </Button>
-          )}
-        </motion.div>
-      )
     }
+  }
+
+  // 渲染导航项
+  const renderNavigationItem = (item: NavigationItem, level = 0, index = 0) => {
+    const Icon = item.icon
+    const isActive = activeModule === item.id
+    const isExpanded = expandedItems.includes(item.id)
+    const isFocused = keyboardNavigation && focusedIndex === index
+    const hasChildren = item.children && item.children.length > 0
 
     return (
       <motion.div
-        key={item.title}
-        className="mb-1"
+        key={item.id}
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.2, delay: index * 0.05 }}
       >
-        {item.href ? (
-          <Link href={item.href}>
-            <Button
-              variant={isActive ? "secondary" : "ghost"}
-              size="sm"
+        <Button
+          variant={isActive ? "default" : "ghost"}
+          className={cn(
+            "w-full justify-start h-auto py-3 px-3 transition-all duration-200",
+            level > 0 && "ml-4 py-2",
+            isActive && "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md",
+            !isActive && "hover:bg-sky-50 hover:text-sky-700",
+            isFocused && "ring-2 ring-sky-300 ring-offset-2",
+            collapsed && !isMobile && "px-2",
+          )}
+          onClick={() => handleItemClick(item)}
+          onFocus={() => {
+            setKeyboardNavigation(true)
+            setFocusedIndex(index)
+          }}
+          tabIndex={keyboardNavigation ? 0 : -1}
+        >
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <Icon
               className={cn(
-                "w-full justify-start text-left font-normal transition-all duration-200",
-                "hover:bg-sky-50 hover:text-sky-600 dark:hover:bg-sky-900/20 hover:scale-[1.02]",
-                "active:scale-95 focus:scale-105 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2",
-                "text-slate-700 dark:text-slate-300",
-                // 移动端优化
-                isMobile ? "h-12 px-4 text-base" : "h-10 px-3 text-sm",
-                level > 0 && !isMobile && "ml-4 w-[calc(100%-1rem)]",
-                level > 0 && isMobile && "ml-6 w-[calc(100%-1.5rem)]",
-                isActive && "bg-sky-100 text-sky-700 shadow-sm dark:bg-sky-900/30 dark:text-sky-300",
-                isFocused && "ring-2 ring-sky-500 ring-offset-2",
+                "flex-shrink-0 transition-colors",
+                collapsed && !isMobile ? "h-5 w-5" : "h-4 w-4",
+                isActive ? "text-white" : "text-slate-600",
               )}
-              onClick={() => handleItemClick(item, index)}
-              tabIndex={isFocused ? 0 : -1}
-            >
-              <item.icon className={cn("flex-shrink-0", isMobile ? "mr-3 h-5 w-5" : "mr-2 h-4 w-4")} />
-              <span className="flex-1 truncate">{item.title}</span>
-              {item.badge && (
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "ml-auto animate-pulse",
-                    isMobile ? "text-sm" : "text-xs",
-                    item.badge === "NEW" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                  )}
-                >
-                  {item.badge}
-                </Badge>
-              )}
-            </Button>
-          </Link>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "w-full justify-start text-left font-normal transition-all duration-200",
-              "hover:bg-sky-50 hover:text-sky-600 dark:hover:bg-sky-900/20 hover:scale-[1.02]",
-              "active:scale-95 focus:scale-105 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2",
-              "text-slate-700 dark:text-slate-300",
-              isMobile ? "h-12 px-4 text-base" : "h-10 px-3 text-sm",
-              level > 0 && !isMobile && "ml-4 w-[calc(100%-1rem)]",
-              level > 0 && isMobile && "ml-6 w-[calc(100%-1.5rem)]",
-              isFocused && "ring-2 ring-sky-500 ring-offset-2",
-            )}
-            onClick={() => hasChildren && handleToggleExpanded(item.title)}
-            tabIndex={isFocused ? 0 : -1}
-          >
-            <item.icon className={cn("flex-shrink-0", isMobile ? "mr-3 h-5 w-5" : "mr-2 h-4 w-4")} />
-            <span className="flex-1 truncate">{item.title}</span>
-            {item.badge && (
-              <Badge
-                variant="secondary"
-                className={cn(
-                  "ml-auto mr-2 animate-pulse",
-                  isMobile ? "text-sm" : "text-xs",
-                  item.badge === "NEW" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                )}
-              >
-                {item.badge}
-              </Badge>
-            )}
-            {hasChildren && !collapsed && (
-              <motion.div className="ml-auto" animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
-                <ChevronRight className={cn(isMobile ? "h-4 w-4" : "h-3 w-3")} />
-              </motion.div>
-            )}
-          </Button>
-        )}
+            />
 
+            <AnimatePresence>
+              {(!collapsed || isMobile) && (
+                <motion.div
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "auto" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  className="flex items-center justify-between flex-1 min-w-0"
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium truncate">{item.label}</span>
+                    {item.description && level === 0 && (
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">{item.description}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    {item.badge && (
+                      <Badge
+                        variant={isActive ? "secondary" : "default"}
+                        className={cn(
+                          "text-xs px-2 py-0.5",
+                          isActive
+                            ? "bg-white/20 text-white border-white/30"
+                            : "bg-gradient-to-r from-orange-400 to-red-500 text-white",
+                        )}
+                      >
+                        {item.badge}
+                      </Badge>
+                    )}
+
+                    {hasChildren && (
+                      <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
+                        <ChevronRight className="h-4 w-4 opacity-50" />
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </Button>
+
+        {/* 子菜单 */}
         <AnimatePresence>
-          {hasChildren && isExpanded && !collapsed && (
+          {hasChildren && isExpanded && (!collapsed || isMobile) && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="mt-1 space-y-1 overflow-hidden"
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
             >
-              {item.children!.map((child, childIndex) => renderMenuItem(child, level + 1, index + childIndex + 1))}
+              <div className="ml-4 mt-1 space-y-1 border-l-2 border-sky-100 pl-4">
+                {item.children?.map((child, childIndex) =>
+                  renderNavigationItem(child, level + 1, index + childIndex + 1),
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -483,238 +387,144 @@ export function Sidebar({
   return (
     <motion.div
       ref={sidebarRef}
-      initial={{ x: -300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: -300, opacity: 0 }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className={cn(
+        "flex flex-col h-full bg-white dark:bg-gray-900 border-r border-slate-200 dark:border-gray-700 shadow-lg",
+        className,
+      )}
+      initial={{ x: -300 }}
+      animate={{ x: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
     >
-      <Card
-        className={cn(
-          "h-full border-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm",
-          isMobile ? "shadow-2xl rounded-none" : "shadow-lg",
-          className,
-        )}
-      >
-        <CardContent className="p-0 h-full">
-          <div className="h-full flex flex-col">
-            {/* 侧边栏头部 */}
-            <motion.div
-              className={cn(
-                "border-b border-gray-200 dark:border-gray-700 transition-all duration-200",
-                isMobile ? "p-6" : "p-4",
-                isScrolled && "shadow-sm bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm",
-              )}
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-            >
-              {!collapsed || isMobile ? (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <motion.div
-                      className={cn(
-                        "bg-gradient-to-br from-sky-400 to-blue-600 rounded-lg flex items-center justify-center",
-                        isMobile ? "w-10 h-10" : "w-8 h-8",
-                      )}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Building2 className={cn("text-white", isMobile ? "h-6 w-6" : "h-5 w-5")} />
-                    </motion.div>
-                    <div>
-                      <h2
-                        className={cn(
-                          "font-semibold text-slate-800 dark:text-slate-200",
-                          isMobile ? "text-base" : "text-sm",
-                        )}
-                      >
-                        YYC³
-                      </h2>
-                      <p className={cn("text-slate-500 dark:text-slate-400", isMobile ? "text-sm" : "text-xs")}>
-                        客户关怀中心
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    {/* 主题切换按钮 */}
-                    <ThemeToggle size="sm" />
-
-                    {/* 移动端关闭按钮 */}
-                    {isMobile && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="hover:bg-gray-100 dark:hover:bg-gray-700"
-                        onClick={onItemClick}
-                      >
-                        <X className="h-5 w-5" />
-                      </Button>
-                    )}
-                  </div>
+      {/* 顶部区域 */}
+      <div className="p-4 border-b border-slate-200 dark:border-gray-700">
+        <AnimatePresence>
+          {(!collapsed || isMobile) && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+              {/* Logo 和标题 */}
+              <div className="flex items-center space-x-3">
+                <img src="/images/yanyu-cloud-3d-logo.png" alt="言语云" className="w-8 h-8 object-contain" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">YYC³</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">客户关怀中心</p>
                 </div>
-              ) : (
-                <div className="flex flex-col items-center space-y-2">
-                  <motion.div
-                    className="w-8 h-8 bg-gradient-to-br from-sky-400 to-blue-600 rounded-lg flex items-center justify-center"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
+              </div>
+
+              {/* 搜索框 */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="搜索功能..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-slate-50 dark:bg-gray-800 border-slate-200 dark:border-gray-600"
+                  onFocus={() => setKeyboardNavigation(false)}
+                />
+              </div>
+
+              {/* 快捷操作 */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1">
+                  <ThemeToggle />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowKeyboardHelp(!showKeyboardHelp)}
+                    className="h-8 w-8 p-0"
                   >
-                    <Building2 className="h-5 w-5 text-white" />
-                  </motion.div>
-                  <ThemeToggle size="sm" />
+                    <Keyboard className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-slate-500">在线</span>
+                </div>
+              </div>
             </motion.div>
+          )}
+        </AnimatePresence>
 
-            {/* 搜索框 */}
-            {(!collapsed || isMobile) && (
-              <motion.div
-                className={cn("border-b border-gray-200 dark:border-gray-700", isMobile ? "p-4" : "p-3")}
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.3, delay: 0.2 }}
-              >
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="搜索菜单..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className={cn(
-                      "w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg",
-                      "focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent",
-                      "transition-all duration-200",
-                    )}
-                  />
-                </div>
-              </motion.div>
-            )}
-
-            {/* 快捷操作区域 */}
-            {(!collapsed || isMobile) && (
-              <motion.div
-                className={cn("border-b border-gray-200 dark:border-gray-700", isMobile ? "p-4" : "p-3")}
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.3, delay: 0.3 }}
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {quickActions.map((action, index) => (
-                    <motion.div
-                      key={action.action}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.2, delay: 0.4 + index * 0.1 }}
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuickAction(action.action)}
-                        className={cn(
-                          "justify-start hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 transition-all duration-200",
-                          "hover:scale-105 active:scale-95",
-                          isMobile ? "h-10 text-sm" : "h-8 text-xs",
-                        )}
-                      >
-                        <action.icon className={cn("mr-1", isMobile ? "w-4 h-4" : "w-3 h-3")} />
-                        {action.title}
-                      </Button>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* 导航菜单 */}
-            <div className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full" ref={scrollAreaRef}>
-                <motion.div
-                  className={cn("space-y-1", isMobile ? "p-4" : "p-3")}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3, delay: 0.5 }}
-                >
-                  {!collapsed && (
-                    <div className={cn("mb-4 flex items-center justify-between", isMobile ? "px-2 py-2" : "px-2 py-1")}>
-                      <h3
-                        className={cn(
-                          "font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider",
-                          isMobile ? "text-sm" : "text-xs",
-                        )}
-                      >
-                        功能导航
-                      </h3>
-                      <div className="flex items-center space-x-1 text-xs text-slate-400">
-                        <Keyboard className="w-3 h-3" />
-                        <span>↑↓</span>
-                      </div>
-                    </div>
-                  )}
-                  {filteredMenuItems.map((item, index) => renderMenuItem(item, 0, index))}
-                </motion.div>
-              </ScrollArea>
-            </div>
-
-            {/* 侧边栏底部 */}
-            {(!collapsed || isMobile) && (
-              <motion.div
-                className={cn("border-t border-gray-200 dark:border-gray-700", isMobile ? "p-6" : "p-4")}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.3, delay: 0.6 }}
-              >
-                {/* 用户信息 */}
-                <div className="flex items-center space-x-3 mb-3">
-                  <Avatar className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")}>
-                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt="用户头像" />
-                    <AvatarFallback className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-sm">
-                      管理
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={cn(
-                        "font-medium text-gray-900 dark:text-gray-100 truncate",
-                        isMobile ? "text-sm" : "text-xs",
-                      )}
-                    >
-                      系统管理员
-                    </p>
-                    <p className={cn("text-gray-500 dark:text-gray-400 truncate", isMobile ? "text-sm" : "text-xs")}>
-                      admin@yyc.com
-                    </p>
-                  </div>
-                </div>
-
-                {/* 系统信息 */}
-                <div className={cn("text-slate-500 dark:text-slate-400 text-center", isMobile ? "text-sm" : "text-xs")}>
-                  © 2024 言语云科技
-                </div>
-
-                {/* 移动端额外信息 */}
-                {isMobile && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-center space-x-4 text-xs text-slate-400">
-                      <span>版本 v2.1.0</span>
-                      <Separator orientation="vertical" className="h-3" />
-                      <div className="flex items-center space-x-1">
-                        <motion.div
-                          className="w-2 h-2 bg-green-400 rounded-full"
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                        />
-                        <span>在线 1,234</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            )}
+        {/* 收缩状态的简化显示 */}
+        {collapsed && !isMobile && (
+          <div className="flex flex-col items-center space-y-3">
+            <img src="/images/yanyu-cloud-3d-logo.png" alt="言语云" className="w-8 h-8 object-contain" />
+            <ThemeToggle />
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
+
+      {/* 键盘帮助提示 */}
+      <AnimatePresence>
+        {showKeyboardHelp && (!collapsed || isMobile) && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="px-4 py-2 bg-sky-50 dark:bg-gray-800 border-b border-sky-200 dark:border-gray-600"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-sky-700 dark:text-sky-300">键盘导航</span>
+              <Button variant="ghost" size="sm" onClick={() => setShowKeyboardHelp(false)} className="h-6 w-6 p-0">
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="text-xs text-sky-600 dark:text-sky-400 space-y-1">
+              <div>↑↓ 导航 | ←→ 展开/收缩</div>
+              <div>Enter 选择 | / 搜索 | Esc 退出</div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 导航菜单 */}
+      <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+        {filteredItems.map((item, index) => renderNavigationItem(item, 0, index))}
+      </nav>
+
+      {/* 底部用户信息 */}
+      <div className="p-4 border-t border-slate-200 dark:border-gray-700">
+        <AnimatePresence>
+          {(!collapsed || isMobile) && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
+              {/* 用户信息 */}
+              <div className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-gray-800 rounded-lg">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src="/images/yanyu-cloud-3d-logo.png" />
+                  <AvatarFallback>管</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">管理员</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">admin@yanyu.cloud</p>
+                </div>
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              </div>
+
+              {/* 底部操作按钮 */}
+              <div className="flex items-center justify-between">
+                <Button variant="ghost" size="sm" className="flex-1 mr-1">
+                  <Settings className="h-4 w-4 mr-2" />
+                  设置
+                </Button>
+                <Button variant="ghost" size="sm" className="flex-1 ml-1">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  退出
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* 收缩状态的用户头像 */}
+        {collapsed && !isMobile && (
+          <div className="flex justify-center">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src="/images/yanyu-cloud-3d-logo.png" />
+              <AvatarFallback>管</AvatarFallback>
+            </Avatar>
+          </div>
+        )}
+      </div>
     </motion.div>
   )
 }

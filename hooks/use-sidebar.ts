@@ -1,158 +1,97 @@
 "use client"
 
-import { useEffect, useCallback } from "react"
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
-interface SidebarStore {
+interface SidebarState {
   isOpen: boolean
-  isMobile: boolean
-  collapsed: boolean
+  isCollapsed: boolean
+  isFullscreen: boolean
+  activeModule: string
+  searchQuery: string
   expandedItems: string[]
-  activeItem: string | null
   focusedIndex: number
-  openSidebar: () => void
-  closeSidebar: () => void
-  toggleSidebar: () => void
-  setMobile: (mobile: boolean) => void
-  setCollapsed: (collapsed: boolean) => void
+  keyboardNavigation: boolean
+
+  // Actions
+  setIsOpen: (open: boolean) => void
+  setIsCollapsed: (collapsed: boolean) => void
+  setIsFullscreen: (fullscreen: boolean) => void
+  setActiveModule: (module: string) => void
+  setSearchQuery: (query: string) => void
   toggleExpanded: (item: string) => void
-  setActiveItem: (item: string | null) => void
   setFocusedIndex: (index: number) => void
-  resetFocus: () => void
+  setKeyboardNavigation: (enabled: boolean) => void
+
+  // Combined actions
+  enterFullscreen: () => void
+  exitFullscreen: () => void
+  toggleSidebar: () => void
+  reset: () => void
 }
 
-export const useSidebar = create<SidebarStore>()(
+export const useSidebar = create<SidebarState>()(
   persist(
     (set, get) => ({
-      isOpen: false,
-      isMobile: false,
-      collapsed: false,
+      isOpen: true,
+      isCollapsed: false,
+      isFullscreen: false,
+      activeModule: "dashboard",
+      searchQuery: "",
       expandedItems: [],
-      activeItem: null,
       focusedIndex: -1,
-      openSidebar: () => set({ isOpen: true }),
-      closeSidebar: () => set({ isOpen: false }),
-      toggleSidebar: () => set((state) => ({ isOpen: !state.isOpen })),
-      setMobile: (mobile) => set({ isMobile: mobile }),
-      setCollapsed: (collapsed) => set({ collapsed }),
-      toggleExpanded: (item) =>
-        set((state) => ({
-          expandedItems: state.expandedItems.includes(item)
-            ? state.expandedItems.filter((i) => i !== item)
-            : [...state.expandedItems, item],
-        })),
-      setActiveItem: (item) => set({ activeItem: item }),
+      keyboardNavigation: false,
+
+      setIsOpen: (open) => set({ isOpen: open }),
+      setIsCollapsed: (collapsed) => set({ isCollapsed: collapsed }),
+      setIsFullscreen: (fullscreen) => set({ isFullscreen: fullscreen }),
+      setActiveModule: (module) => {
+        set({ activeModule: module })
+        // 进入页面时自动收缩侧边栏实现全屏
+        if (module !== "dashboard") {
+          set({ isCollapsed: true, isFullscreen: true })
+        }
+      },
+      setSearchQuery: (query) => set({ searchQuery: query }),
+      toggleExpanded: (item) => {
+        const { expandedItems } = get()
+        const isExpanded = expandedItems.includes(item)
+        set({
+          expandedItems: isExpanded ? expandedItems.filter((i) => i !== item) : [...expandedItems, item],
+        })
+      },
       setFocusedIndex: (index) => set({ focusedIndex: index }),
-      resetFocus: () => set({ focusedIndex: -1 }),
+      setKeyboardNavigation: (enabled) => set({ keyboardNavigation: enabled }),
+
+      enterFullscreen: () => set({ isCollapsed: true, isFullscreen: true }),
+      exitFullscreen: () => set({ isCollapsed: false, isFullscreen: false }),
+      toggleSidebar: () => {
+        const { isOpen, isCollapsed } = get()
+        if (window.innerWidth < 768) {
+          set({ isOpen: !isOpen })
+        } else {
+          set({ isCollapsed: !isCollapsed })
+        }
+      },
+      reset: () =>
+        set({
+          isOpen: true,
+          isCollapsed: false,
+          isFullscreen: false,
+          activeModule: "dashboard",
+          searchQuery: "",
+          expandedItems: [],
+          focusedIndex: -1,
+          keyboardNavigation: false,
+        }),
     }),
     {
       name: "sidebar-storage",
       partialize: (state) => ({
-        collapsed: state.collapsed,
+        isCollapsed: state.isCollapsed,
+        activeModule: state.activeModule,
         expandedItems: state.expandedItems,
       }),
     },
   ),
 )
-
-// 检测移动设备的 hook
-export function useIsMobile() {
-  const { isMobile, setMobile } = useSidebar()
-
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768
-      setMobile(mobile)
-
-      // 移动端自动关闭侧边栏
-      if (mobile) {
-        useSidebar.getState().closeSidebar()
-      }
-    }
-
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
-  }, [setMobile])
-
-  return isMobile
-}
-
-// 键盘导航 hook
-export function useSidebarKeyboard(menuItems: any[]) {
-  const { focusedIndex, setFocusedIndex, resetFocus, toggleExpanded, closeSidebar } = useSidebar()
-
-  const flattenMenuItems = useCallback((items: any[], level = 0): any[] => {
-    const result: any[] = []
-    items.forEach((item) => {
-      result.push({ ...item, level })
-      if (item.children && item.expanded) {
-        result.push(...flattenMenuItems(item.children, level + 1))
-      }
-    })
-    return result
-  }, [])
-
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      const flatItems = flattenMenuItems(menuItems)
-
-      switch (event.key) {
-        case "ArrowDown":
-          event.preventDefault()
-          setFocusedIndex(Math.min(focusedIndex + 1, flatItems.length - 1))
-          break
-        case "ArrowUp":
-          event.preventDefault()
-          setFocusedIndex(Math.max(focusedIndex - 1, 0))
-          break
-        case "ArrowRight":
-          event.preventDefault()
-          if (focusedIndex >= 0 && flatItems[focusedIndex]?.children) {
-            toggleExpanded(flatItems[focusedIndex].title)
-          }
-          break
-        case "ArrowLeft":
-          event.preventDefault()
-          if (focusedIndex >= 0 && flatItems[focusedIndex]?.children) {
-            toggleExpanded(flatItems[focusedIndex].title)
-          }
-          break
-        case "Enter":
-        case " ":
-          event.preventDefault()
-          if (focusedIndex >= 0) {
-            const item = flatItems[focusedIndex]
-            if (item.href) {
-              window.location.href = item.href
-            } else if (item.children) {
-              toggleExpanded(item.title)
-            }
-          }
-          break
-        case "Escape":
-          event.preventDefault()
-          closeSidebar()
-          resetFocus()
-          break
-        case "Home":
-          event.preventDefault()
-          setFocusedIndex(0)
-          break
-        case "End":
-          event.preventDefault()
-          setFocusedIndex(flatItems.length - 1)
-          break
-      }
-    },
-    [focusedIndex, setFocusedIndex, resetFocus, toggleExpanded, closeSidebar, flattenMenuItems, menuItems],
-  )
-
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [handleKeyDown])
-
-  return { focusedIndex, flattenMenuItems }
-}
