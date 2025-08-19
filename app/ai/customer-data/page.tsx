@@ -1,628 +1,439 @@
 "use client"
 
 import { useState } from "react"
+import { motion } from "framer-motion"
+import {
+  Users,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Star,
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  Download,
+  RefreshCw,
+  Eye,
+  BarChart3,
+  PieChart,
+  Activity,
+} from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BackButton } from "@/components/back-button"
-import { motion } from "framer-motion"
-import {
-  Brain,
-  TrendingUp,
-  Target,
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Zap,
-  PieChartIcon as RechartsPieChart,
-  Activity,
-  Star,
-  TrendingDown,
-  Filter,
-  Download,
-} from "lucide-react"
-import {
-  AreaChart,
-  Area,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-} from "recharts"
+import { useSidebar } from "@/hooks/use-sidebar"
 
-export default function AICustomerDataPage() {
-  const [selectedPeriod, setSelectedPeriod] = useState("month")
-  const [selectedSegment, setSelectedSegment] = useState("all")
+interface CustomerInsight {
+  id: string
+  title: string
+  description: string
+  impact: "high" | "medium" | "low"
+  category: "behavior" | "demographic" | "financial" | "engagement"
+  value: string
+  trend: "up" | "down" | "stable"
+  details: string[]
+}
+
+interface CustomerSegment {
+  id: string
+  name: string
+  count: number
+  percentage: number
+  avgValue: number
+  characteristics: string[]
+  color: string
+}
+
+const mockInsights: CustomerInsight[] = [
+  {
+    id: "1",
+    title: "高价值客户流失风险",
+    description: "检测到15%的高价值客户显示流失倾向",
+    impact: "high",
+    category: "behavior",
+    value: "15%",
+    trend: "up",
+    details: ["过去30天内购买频率下降40%", "客服咨询次数增加3倍", "产品评分平均下降1.2分", "建议立即启动挽留计划"],
+  },
+  {
+    id: "2",
+    title: "新客户转化率提升",
+    description: "本月新客户转化率较上月提升23%",
+    impact: "high",
+    category: "engagement",
+    value: "23%",
+    trend: "up",
+    details: ["优化后的引导流程效果显著", "个性化推荐准确率达到78%", "首次购买时间缩短至3.2天", "建议扩大推广投入"],
+  },
+  {
+    id: "3",
+    title: "季节性购买模式",
+    description: "识别出明显的季节性购买趋势",
+    impact: "medium",
+    category: "behavior",
+    value: "季节性",
+    trend: "stable",
+    details: ["春季销量增长45%", "夏季产品A需求激增", "秋冬季节服务类产品受欢迎", "建议调整库存和营销策略"],
+  },
+  {
+    id: "4",
+    title: "客户满意度分析",
+    description: "整体客户满意度保持在4.2/5.0",
+    impact: "medium",
+    category: "engagement",
+    value: "4.2/5.0",
+    trend: "stable",
+    details: [
+      "产品质量评分最高(4.5/5.0)",
+      "物流服务有待改善(3.8/5.0)",
+      "客服响应时间优秀(4.4/5.0)",
+      "建议重点优化物流体验",
+    ],
+  },
+]
+
+const mockSegments: CustomerSegment[] = [
+  {
+    id: "1",
+    name: "高价值忠诚客户",
+    count: 1250,
+    percentage: 25,
+    avgValue: 5800,
+    characteristics: ["购买频率高", "客单价高", "品牌忠诚度高", "推荐意愿强"],
+    color: "bg-green-500",
+  },
+  {
+    id: "2",
+    name: "潜力增长客户",
+    count: 1875,
+    percentage: 37.5,
+    avgValue: 2400,
+    characteristics: ["购买频率中等", "价格敏感", "品类偏好明确", "活跃度高"],
+    color: "bg-blue-500",
+  },
+  {
+    id: "3",
+    name: "新注册客户",
+    count: 1000,
+    percentage: 20,
+    avgValue: 800,
+    characteristics: ["首次购买", "观望态度", "需要引导", "转化潜力大"],
+    color: "bg-yellow-500",
+  },
+  {
+    id: "4",
+    name: "流失风险客户",
+    count: 875,
+    percentage: 17.5,
+    avgValue: 1200,
+    characteristics: ["购买频率下降", "投诉增加", "满意度低", "需要挽留"],
+    color: "bg-red-500",
+  },
+]
+
+export default function CustomerDataAnalysisPage() {
   const [selectedInsight, setSelectedInsight] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const { isFullscreen } = useSidebar()
 
-  // AI分析数据
-  const aiInsights = [
-    {
-      id: "1",
-      title: "高价值客户识别",
-      description: "AI识别出23个高潜力客户，预计转化价值180万",
-      confidence: 92,
-      status: "active",
-      impact: "high",
-      customers: 23,
-      value: 1800000,
-      trend: "up",
-      change: "+15%",
-    },
-    {
-      id: "2",
-      title: "流失风险预警",
-      description: "检测到15个客户存在流失风险，建议立即跟进",
-      confidence: 87,
-      status: "warning",
-      impact: "critical",
-      customers: 15,
-      value: 450000,
-      trend: "down",
-      change: "-8%",
-    },
-    {
-      id: "3",
-      title: "交叉销售机会",
-      description: "发现38个交叉销售机会，平均客单价可提升35%",
-      confidence: 78,
-      status: "opportunity",
-      impact: "medium",
-      customers: 38,
-      value: 680000,
-      trend: "up",
-      change: "+22%",
-    },
-    {
-      id: "4",
-      title: "客户行为模式",
-      description: "识别出5种主要客户行为模式，优化营销策略",
-      confidence: 95,
-      status: "completed",
-      impact: "high",
-      customers: 156,
-      value: 0,
-      trend: "stable",
-      change: "0%",
-    },
-  ]
-
-  // 客户分段数据
-  const customerSegments = [
-    { name: "VIP客户", value: 28, color: "#8b5cf6", growth: 12, revenue: 2800000 },
-    { name: "活跃客户", value: 45, color: "#3b82f6", growth: 8, revenue: 1800000 },
-    { name: "潜在客户", value: 67, color: "#10b981", growth: 15, revenue: 890000 },
-    { name: "流失风险", value: 16, color: "#f59e0b", growth: -5, revenue: 320000 },
-  ]
-
-  // 客户价值趋势
-  const valueData = [
-    { month: "1月", value: 2400000, prediction: 2450000, actual: 2380000 },
-    { month: "2月", value: 2600000, prediction: 2680000, actual: 2620000 },
-    { month: "3月", value: 2800000, prediction: 2850000, actual: 2790000 },
-    { month: "4月", value: 3100000, prediction: 3150000, actual: 3080000 },
-    { month: "5月", value: 3300000, prediction: 3400000, actual: 3320000 },
-    { month: "6月", value: 3500000, prediction: 3600000, actual: 3480000 },
-  ]
-
-  // 客户行为分析
-  const behaviorData = [
-    { behavior: "浏览产品", frequency: 85, conversion: 12, satisfaction: 78 },
-    { behavior: "询价咨询", frequency: 45, conversion: 35, satisfaction: 85 },
-    { behavior: "下载资料", frequency: 32, conversion: 28, satisfaction: 72 },
-    { behavior: "参与活动", frequency: 28, conversion: 42, satisfaction: 88 },
-    { behavior: "推荐朋友", frequency: 15, conversion: 68, satisfaction: 95 },
-  ]
-
-  // 实时数据
-  const realtimeMetrics = [
-    { label: "在线客户", value: 1247, change: "+5.2%", trend: "up" },
-    { label: "活跃会话", value: 89, change: "+12.1%", trend: "up" },
-    { label: "转化率", value: "3.8%", change: "+0.3%", trend: "up" },
-    { label: "平均响应时间", value: "2.3s", change: "-0.5s", trend: "up" },
-  ]
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "border-l-emerald-500 bg-emerald-50 dark:bg-emerald-950"
-      case "warning":
-        return "border-l-orange-500 bg-orange-50 dark:bg-orange-950"
-      case "opportunity":
-        return "border-l-blue-500 bg-blue-50 dark:bg-blue-950"
-      case "completed":
-        return "border-l-purple-500 bg-purple-50 dark:bg-purple-950"
-      default:
-        return "border-l-gray-500 bg-gray-50 dark:bg-gray-950"
-    }
+  const handleRefresh = async () => {
+    setIsLoading(true)
+    // 模拟数据刷新
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+    setIsLoading(false)
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "active":
-        return <CheckCircle className="w-5 h-5 text-emerald-600" />
-      case "warning":
-        return <AlertTriangle className="w-5 h-5 text-orange-600" />
-      case "opportunity":
-        return <Target className="w-5 h-5 text-blue-600" />
-      case "completed":
-        return <Star className="w-5 h-5 text-purple-600" />
-      default:
-        return <Clock className="w-5 h-5 text-gray-600" />
-    }
-  }
-
-  const getImpactBadge = (impact: string) => {
+  const getImpactColor = (impact: string) => {
     switch (impact) {
       case "high":
-        return <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">高影响</Badge>
+        return "text-red-600 bg-red-50 border-red-200"
       case "medium":
-        return <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">中影响</Badge>
-      case "critical":
-        return <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">关键</Badge>
+        return "text-yellow-600 bg-yellow-50 border-yellow-200"
+      case "low":
+        return "text-green-600 bg-green-50 border-green-200"
       default:
-        return <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300">低影响</Badge>
+        return "text-gray-600 bg-gray-50 border-gray-200"
     }
   }
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
       case "up":
-        return <TrendingUp className="w-4 h-4 text-green-500" />
+        return <TrendingUp className="h-4 w-4 text-green-500" />
       case "down":
-        return <TrendingDown className="w-4 h-4 text-red-500" />
+        return <TrendingDown className="h-4 w-4 text-red-500" />
       default:
-        return <Activity className="w-4 h-4 text-gray-500" />
+        return <Activity className="h-4 w-4 text-gray-500" />
     }
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-purple-950 dark:via-blue-950 dark:to-indigo-950 min-h-screen">
-      {/* 返回按钮 */}
-      <BackButton title="AI客户数据分析" />
+    <div className={`min-h-screen bg-background ${isFullscreen ? "pl-0" : "pl-72"} transition-all duration-300`}>
+      <div className="p-6 space-y-6">
+        {/* 页面头部 */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center justify-between"
+        >
+          <div className="space-y-1">
+            <BackButton className="mb-4" />
+            <h1 className="text-3xl font-bold tracking-tight">AI 客户数据分析</h1>
+            <p className="text-muted-foreground">基于机器学习的客户行为分析和预测洞察</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+              刷新数据
+            </Button>
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              导出报告
+            </Button>
+            <Button variant="outline">
+              <Filter className="h-4 w-4 mr-2" />
+              筛选
+            </Button>
+          </div>
+        </motion.div>
 
-      {/* 页面头部 */}
-      <motion.div
-        className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
-            <Brain className="w-8 h-8 mr-3 text-purple-600" />
-            智能客户洞察与预测分析
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">基于机器学习的客户行为分析与商业智能预测系统</p>
-        </div>
-        <div className="flex flex-wrap items-center space-x-3">
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-32 border-l-4 border-l-purple-500">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">本周</SelectItem>
-              <SelectItem value="month">本月</SelectItem>
-              <SelectItem value="quarter">本季度</SelectItem>
-              <SelectItem value="year">本年度</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm">
-            <Filter className="w-4 h-4 mr-2" />
-            筛选
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            导出
-          </Button>
-          <Button className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white transition-all duration-300 hover:shadow-xl hover:scale-105">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            刷新分析
-          </Button>
-        </div>
-      </motion.div>
-
-      {/* 实时指标概览 */}
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-      >
-        {realtimeMetrics.map((metric, index) => (
-          <Card
-            key={index}
-            className="border-l-4 border-l-purple-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-          >
+        {/* 关键指标卡片 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        >
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{metric.label}</CardTitle>
-              {getTrendIcon(metric.trend)}
+              <CardTitle className="text-sm font-medium">总客户数</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">{metric.value}</div>
-              <p className={`text-xs ${metric.trend === "up" ? "text-green-600" : "text-red-600"}`}>
-                {metric.change} 较昨日
+              <div className="text-2xl font-bold">5,000</div>
+              <p className="text-xs text-muted-foreground">
+                <span className="text-green-600">+12%</span> 较上月
               </p>
             </CardContent>
           </Card>
-        ))}
-      </motion.div>
 
-      {/* AI洞察概览 */}
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-      >
-        <Card className="border-l-4 border-l-purple-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI洞察数量</CardTitle>
-            <Brain className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">127</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">本月新增 +23</p>
-          </CardContent>
-        </Card>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">平均客户价值</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">¥2,850</div>
+              <p className="text-xs text-muted-foreground">
+                <span className="text-green-600">+8%</span> 较上月
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-emerald-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">预测准确率</CardTitle>
-            <Target className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">94.2%</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">较上月 +2.1%</p>
-          </CardContent>
-        </Card>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">客户满意度</CardTitle>
+              <Star className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">4.2/5.0</div>
+              <p className="text-xs text-muted-foreground">
+                <span className="text-yellow-600">持平</span> 较上月
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-blue-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">客户价值</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">¥350万</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">预测增长 +15%</p>
-          </CardContent>
-        </Card>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">流失率</CardTitle>
+              <TrendingDown className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">3.2%</div>
+              <p className="text-xs text-muted-foreground">
+                <span className="text-green-600">-0.5%</span> 较上月
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card className="border-l-4 border-l-orange-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">风险客户</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">15</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">需要立即关注</p>
-          </CardContent>
-        </Card>
-      </motion.div>
+        {/* 主要内容区域 */}
+        <Tabs defaultValue="insights" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="insights">智能洞察</TabsTrigger>
+            <TabsTrigger value="segments">客户分群</TabsTrigger>
+            <TabsTrigger value="predictions">预测分析</TabsTrigger>
+          </TabsList>
 
-      {/* AI洞察列表 */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-        <Card className="border-l-4 border-l-purple-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader>
-            <CardTitle className="flex items-center text-purple-700 dark:text-purple-300">
-              <Zap className="w-5 h-5 mr-2" />
-              AI智能洞察
-            </CardTitle>
-            <CardDescription>基于机器学习的客户行为分析与预测</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {aiInsights.map((insight, index) => (
+          <TabsContent value="insights" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="grid gap-6"
+            >
+              {mockInsights.map((insight, index) => (
                 <motion.div
                   key={insight.id}
-                  className={`border-l-4 rounded-xl p-4 transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer ${getStatusColor(insight.status)}`}
-                  onClick={() => setSelectedInsight(selectedInsight === insight.id ? null : insight.id)}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
+                  <Card className="hover:shadow-lg transition-all cursor-pointer">
+                    <CardHeader
+                      onClick={() => setSelectedInsight(selectedInsight === insight.id ? null : insight.id)}
+                      className="pb-3"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <CardTitle className="text-lg">{insight.title}</CardTitle>
+                            <Badge className={getImpactColor(insight.impact)}>
+                              {insight.impact === "high" ? "高" : insight.impact === "medium" ? "中" : "低"}影响
+                            </Badge>
+                            {getTrendIcon(insight.trend)}
+                          </div>
+                          <CardDescription className="text-base">{insight.description}</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-primary">{insight.value}</div>
+                          </div>
+                          {selectedInsight === insight.id ? (
+                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    {selectedInsight === insight.id && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <CardContent className="pt-0">
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                              详细分析
+                            </h4>
+                            <ul className="space-y-2">
+                              {insight.details.map((detail, idx) => (
+                                <li key={idx} className="flex items-start gap-2">
+                                  <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0" />
+                                  <span className="text-sm">{detail}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="flex gap-2 pt-3">
+                              <Button size="sm" variant="default">
+                                <Eye className="h-4 w-4 mr-2" />
+                                查看详情
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Download className="h-4 w-4 mr-2" />
+                                导出数据
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </motion.div>
+                    )}
+                  </Card>
+                </motion.div>
+              ))}
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value="segments" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="grid gap-6"
+            >
+              {mockSegments.map((segment, index) => (
+                <motion.div
+                  key={segment.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
                 >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center space-x-3">
-                      {getStatusIcon(insight.status)}
+                  <Card className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full ${segment.color}`} />
+                          <CardTitle>{segment.name}</CardTitle>
+                        </div>
+                        <Badge variant="secondary">{segment.count.toLocaleString()} 人</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">占比</p>
+                          <div className="flex items-center gap-2">
+                            <Progress value={segment.percentage} className="flex-1" />
+                            <span className="text-sm font-medium">{segment.percentage}%</span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">平均价值</p>
+                          <p className="text-lg font-semibold">¥{segment.avgValue.toLocaleString()}</p>
+                        </div>
+                      </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">{insight.title}</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{insight.description}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {getImpactBadge(insight.impact)}
-                      <Badge variant="outline">置信度 {insight.confidence}%</Badge>
-                      {getTrendIcon(insight.trend)}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{insight.customers}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">涉及客户</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        {insight.value > 0 ? `¥${(insight.value / 10000).toFixed(0)}万` : "-"}
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">预估价值</div>
-                    </div>
-                    <div className="text-center">
-                      <div
-                        className={`text-lg font-bold ${insight.trend === "up" ? "text-green-600" : insight.trend === "down" ? "text-red-600" : "text-gray-600"}`}
-                      >
-                        {insight.change}
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">变化趋势</div>
-                    </div>
-                    <div className="text-center">
-                      <Progress value={insight.confidence} className="h-2 mt-2" />
-                      <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">置信度</div>
-                    </div>
-                  </div>
-
-                  {selectedInsight === insight.id && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-2">详细分析</h5>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            基于过去6个月的客户行为数据，AI模型识别出关键模式和趋势。
-                            建议采取针对性的营销策略以最大化转化效果。
-                          </p>
-                        </div>
-                        <div>
-                          <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-2">建议行动</h5>
-                          <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                            <li>• 制定个性化营销方案</li>
-                            <li>• 优化客户接触点体验</li>
-                            <li>• 建立预警监控机制</li>
-                          </ul>
+                        <p className="text-sm text-muted-foreground mb-2">特征标签</p>
+                        <div className="flex flex-wrap gap-2">
+                          {segment.characteristics.map((char, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {char}
+                            </Badge>
+                          ))}
                         </div>
                       </div>
-                    </motion.div>
-                  )}
-
-                  <div className="flex justify-end space-x-2 mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="transition-all duration-300 hover:scale-105 bg-transparent"
-                    >
-                      查看详情
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white transition-all duration-300 hover:scale-105"
-                    >
-                      执行建议
-                    </Button>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </motion.div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            </motion.div>
+          </TabsContent>
 
-      {/* 数据可视化 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 客户价值趋势 */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <Card className="border-l-4 border-l-blue-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center text-blue-700 dark:text-blue-300">
-                <TrendingUp className="w-5 h-5 mr-2" />
-                客户价值趋势预测
-              </CardTitle>
-              <CardDescription>实际价值 vs AI预测价值 vs 历史数据</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={valueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`¥${((value as number) / 10000).toFixed(0)}万`, ""]} />
-                  <Area
-                    type="monotone"
-                    dataKey="actual"
-                    stackId="1"
-                    stroke="#10b981"
-                    fill="url(#greenGradient)"
-                    name="实际价值"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stackId="2"
-                    stroke="#3b82f6"
-                    fill="url(#blueGradient)"
-                    name="当前价值"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="prediction"
-                    stackId="3"
-                    stroke="#8b5cf6"
-                    fill="url(#purpleGradient)"
-                    name="预测价值"
-                  />
-                  <defs>
-                    <linearGradient id="greenGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
-                    </linearGradient>
-                    <linearGradient id="blueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
-                    </linearGradient>
-                    <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1} />
-                    </linearGradient>
-                  </defs>
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* 客户分段分布 */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-        >
-          <Card className="border-l-4 border-l-emerald-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center text-emerald-700 dark:text-emerald-300">
-                <RechartsPieChart className="w-5 h-5 mr-2" />
-                客户分段分布
-              </CardTitle>
-              <CardDescription>基于AI算法的客户智能分类</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={customerSegments}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                  >
-                    {customerSegments.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="mt-4 grid grid-cols-2 gap-4">
-                {customerSegments.map((segment, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }} />
-                      <span className="text-sm font-medium">{segment.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-bold">{segment.value}</div>
-                      <div className={`text-xs ${segment.growth > 0 ? "text-green-600" : "text-red-600"}`}>
-                        {segment.growth > 0 ? "+" : ""}
-                        {segment.growth}%
-                      </div>
-                    </div>
+          <TabsContent value="predictions" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="grid gap-6"
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    预测分析模型
+                  </CardTitle>
+                  <CardDescription>基于历史数据和机器学习算法的客户行为预测</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <PieChart className="h-12 w-12 mx-auto mb-4" />
+                    <p>预测分析功能正在开发中...</p>
+                    <p className="text-sm mt-2">敬请期待更强大的AI预测能力</p>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+        </Tabs>
       </div>
-
-      {/* 客户行为分析 */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.6 }}
-      >
-        <Card className="border-l-4 border-l-orange-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader>
-            <CardTitle className="flex items-center text-orange-700 dark:text-orange-300">
-              <Activity className="w-5 h-5 mr-2" />
-              客户行为转化分析
-            </CardTitle>
-            <CardDescription>不同行为的频次、转化率与满意度对比</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={behaviorData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="behavior" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="frequency" fill="#f59e0b" name="行为频次" />
-                <Bar dataKey="conversion" fill="#10b981" name="转化率%" />
-                <Bar dataKey="satisfaction" fill="#3b82f6" name="满意度%" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* 预测模型性能 */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.7 }}
-      >
-        <Card className="border-l-4 border-l-indigo-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader>
-            <CardTitle className="flex items-center text-indigo-700 dark:text-indigo-300">
-              <Brain className="w-5 h-5 mr-2" />
-              AI模型性能监控
-            </CardTitle>
-            <CardDescription>机器学习模型的准确性和性能指标</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">94.2%</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">预测准确率</div>
-                <Progress value={94.2} className="mt-2" />
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">87.5%</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">模型召回率</div>
-                <Progress value={87.5} className="mt-2" />
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">91.8%</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">F1分数</div>
-                <Progress value={91.8} className="mt-2" />
-              </div>
-            </div>
-
-            <div className="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 rounded-lg">
-              <h4 className="font-semibold text-indigo-700 dark:text-indigo-300 mb-2">模型优化建议</h4>
-              <ul className="text-sm text-indigo-600 dark:text-indigo-400 space-y-1">
-                <li>• 增加更多历史数据样本以提升预测精度</li>
-                <li>• 优化特征工程，引入更多客户行为维度</li>
-                <li>• 定期重训练模型以适应市场变化</li>
-                <li>• 考虑集成多个模型以提升整体性能</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
     </div>
   )
 }
