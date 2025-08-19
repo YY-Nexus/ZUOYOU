@@ -1,87 +1,44 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import React from "react"
 
-interface UseSidebarOptions {
-  defaultCollapsed?: boolean
-  autoCollapse?: boolean
-  autoCollapseDelay?: number
-  mobileBreakpoint?: number
+import { create } from "zustand"
+
+interface SidebarStore {
+  isOpen: boolean
+  isMobile: boolean
+  collapsed: boolean
+  openSidebar: () => void
+  closeSidebar: () => void
+  toggleSidebar: () => void
+  setMobile: (mobile: boolean) => void
+  setCollapsed: (collapsed: boolean) => void
 }
 
-export function useSidebar(options: UseSidebarOptions = {}) {
-  const { defaultCollapsed = false, autoCollapse = true, autoCollapseDelay = 3000, mobileBreakpoint = 1024 } = options
+export const useSidebar = create<SidebarStore>((set) => ({
+  isOpen: false,
+  isMobile: false,
+  collapsed: false,
+  openSidebar: () => set({ isOpen: true }),
+  closeSidebar: () => set({ isOpen: false }),
+  toggleSidebar: () => set((state) => ({ isOpen: !state.isOpen })),
+  setMobile: (mobile) => set({ isMobile: mobile }),
+  setCollapsed: (collapsed) => set({ collapsed }),
+}))
 
-  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed)
-  const [isHovered, setIsHovered] = useState(false)
-  const [isPinned, setIsPinned] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+// 检测移动设备的 hook
+export function useIsMobile() {
+  const { isMobile, setMobile } = useSidebar()
 
-  // 检测移动端
-  useEffect(() => {
+  React.useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth < mobileBreakpoint
-      setIsMobile(mobile)
-      if (mobile) {
-        setIsCollapsed(true)
-        setIsPinned(false)
-      }
+      setMobile(window.innerWidth < 768)
     }
 
     checkMobile()
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
-  }, [mobileBreakpoint])
+  }, [setMobile])
 
-  // 自动收缩逻辑
-  useEffect(() => {
-    if (!autoCollapse || isPinned || isMobile || isHovered || isCollapsed) {
-      return
-    }
-
-    const timer = setTimeout(() => {
-      setIsCollapsed(true)
-    }, autoCollapseDelay)
-
-    return () => clearTimeout(timer)
-  }, [autoCollapse, isPinned, isMobile, isHovered, isCollapsed, autoCollapseDelay])
-
-  const toggleCollapsed = useCallback(() => {
-    setIsCollapsed((prev) => !prev)
-  }, [])
-
-  const togglePinned = useCallback(() => {
-    setIsPinned((prev) => {
-      const newPinned = !prev
-      if (newPinned) {
-        setIsCollapsed(false)
-      }
-      return newPinned
-    })
-  }, [])
-
-  const handleMouseEnter = useCallback(() => {
-    if (!isMobile) {
-      setIsHovered(true)
-      setIsCollapsed(false)
-    }
-  }, [isMobile])
-
-  const handleMouseLeave = useCallback(() => {
-    if (!isMobile) {
-      setIsHovered(false)
-    }
-  }, [isMobile])
-
-  return {
-    isCollapsed,
-    isHovered,
-    isPinned,
-    isMobile,
-    setIsCollapsed,
-    toggleCollapsed,
-    togglePinned,
-    handleMouseEnter,
-    handleMouseLeave,
-  }
+  return isMobile
 }
