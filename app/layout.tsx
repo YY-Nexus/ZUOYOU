@@ -1,11 +1,12 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { ThemeProvider } from "@/components/theme-provider"
 import { ResponsiveLayoutProvider } from "@/components/layout/responsive-layout"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "言语云企业管理系统",
-  description: "企业级管理系统解决方案",
+  title: "YYC³ - 客户关怀中心",
+  description: "企业级客户关怀管理系统解决方案",
   generator: "v0.dev",
   openGraph: {
     images: ["/images/yanyu-cloud-logo.png"],
@@ -27,9 +28,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
       <body className="antialiased">
-        <ResponsiveLayoutProvider>{children}</ResponsiveLayoutProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <ResponsiveLayoutProvider>{children}</ResponsiveLayoutProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
